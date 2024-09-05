@@ -13,10 +13,8 @@ export class ItemManager {
 
     public processItem = async (item: RawItem) => {
         console.log("PROCESSING ITEM", `${item.title}, ${item.brand_dto.title}`);
-
-        if (!this.searches || this.searches.length === 0) throw new Error("No searches found");
-        for (const search of this.searches) {
-
+        if (!this.searches || this.searches.length === 0) return
+        for (const search of this.searches) {            
             let phraseMatch = true;
             if (search.phrases) {
                 phraseMatch = matchSearchPhrases(search.phrases.split(","), item.title, item.description);
@@ -40,7 +38,7 @@ export class ItemManager {
                 sizeMatch = matchSize(search.sizeIds, item.size_id);
             }
 
-            if (phraseMatch && brandMatch && priceMatch) {
+            if (phraseMatch && brandMatch && priceMatch && sizeMatch) {
                 console.log("MATCHED SEARCH", search.title);
                 const discordPost = await createDiscordPost(item);
                 await postMessageToChannel(discordPost, search.channelId);
@@ -58,6 +56,7 @@ export class ItemManager {
             .leftJoin(searchWithBrands, eq(customSearch.id, searchWithBrands.searchId))
             .leftJoin(brands, eq(searchWithBrands.brandId, brands.id));
         const searches = new Map<string, CustomSearch & { brands: Brand[] }>();
+        
         for (const search of result) {
             const searchId = search.search.id;
             if (!searches.has(searchId)) {
@@ -72,6 +71,7 @@ export class ItemManager {
         }
         const searchesArray: CustomSearchWithBrands[] = Array.from(searches.values());
         this.searches = searchesArray;
+        
     }
 }
 
@@ -85,7 +85,7 @@ function matchSearchPhrases(searchWords: string[], itemTitle: string, itemDescri
     });
 }
 
-function matchBrands(brandIds: number[], itemBrandId: number) {
+function matchBrands(brandIds: number[], itemBrandId: number) {    
     return brandIds.includes(itemBrandId);
 }
 

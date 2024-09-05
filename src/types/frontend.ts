@@ -5,4 +5,6 @@ export type AddSearchFormData = {
     phrases: string[];
     sizeIds: string[];
     brandIds: string[];
+    addedAt: Date,
+    createdById: string,
 };

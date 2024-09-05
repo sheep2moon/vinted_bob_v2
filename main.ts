@@ -50,10 +50,9 @@ app.post("/add-search", async (req: Request, res: Response) => {
                 sizeIds: data.sizeIds.map(sizeId => parseInt(sizeId))
             })
             .returning({ id: customSearch.id });
-        console.log(data);
 
         const searchId = search[0].id;
-        Promise.all(
+        await Promise.all(
             data.brandIds.map(brandId => {
                 return db.insert(searchWithBrands).values({
                     searchId,
@@ -62,18 +61,17 @@ app.post("/add-search", async (req: Request, res: Response) => {
             })
         );
         await item_manager.refreshSearches();
+        console.log("Added to DB");
+        return res.status(200).send("OK");
     } catch (error) {
         Logger.log("ERROR", error);
         res.status(500).send(error);
     }
 
-    console.log("Added to DB");
-    return res.status(200).send("OK");
 });
 
 app.post("/delete-search", async (req: Request, res: Response) => {
     const deleteId = req.body.searchId ?? null;
-    console.log(req.body);
 
     if (!deleteId) return res.status(400).send("No searchId");
     try {
@@ -98,9 +96,9 @@ const item_manager = new ItemManager();
 
 const startBot = async () => {
     await item_manager.init();
+    await discordInit();
     await Proxy.init();
     await vinted.init();
-    await discordInit();
     while (true) {
         try {
             await vinted.searchForItems(item_manager.processItem);

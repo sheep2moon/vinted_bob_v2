@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { integer, pgTableCreator, primaryKey, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTableCreator, primaryKey, varchar,timestamp } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator(name => `vinted-bot-front_${name}`);
 
@@ -19,7 +19,9 @@ export const customSearch = createTable("customSearch", {
     phrases: varchar("phrases", { length: 255 }).notNull(),
     priceFrom: integer("priceFrom"),
     priceTo: integer("priceTo"),
-    sizeIds: integer("sizeIds").array()
+    sizeIds: integer("sizeIds").array(),
+    addedAt: timestamp("addedAt").notNull().defaultNow(),
+  createdById: varchar("createdById", { length: 255 }).notNull(),
 });
 
 export const searchWithBrands = createTable(

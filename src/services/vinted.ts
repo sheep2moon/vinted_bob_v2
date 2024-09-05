@@ -10,14 +10,14 @@ export class Vinted {
     idStep: number = 1;
     consecutiveErrorCount: number = 0;
     currentId: number = 0;
-    lastPublishedTime: Date = new Date();
+    lastPublishedTime: number = Date.now() - 10000;
     maxConcurrentRequests: number;
     adjustedMaxConcurrentRequests: number;
     activePromises = new Set<Promise<any>>();
     cookie: string = "";
 
     constructor() {
-        this.maxConcurrentRequests = Math.max(1, Math.floor(parseInt(process.env.MAX_CONCURRENT_REQUESTS || "5")));
+        this.maxConcurrentRequests = Math.max(1, Math.floor(parseInt(process.env.MAX_CONCURRENT_REQUESTS || "300")));
         this.adjustedMaxConcurrentRequests = this.maxConcurrentRequests;
     }
 
@@ -32,13 +32,15 @@ export class Vinted {
         } else {
             throw new Error("Failed to find highest catalog ID");
         }
-        // setInterval(() => {
-        //     Logger.log("INFO", `Concurrent requests: ${this.activePromises.size} Current ID: ${this.currentId}  lastPublishedTime: ${this.lastPublishedTime.getTime()} ConsecutiveErrors: ${this.consecutiveErrorCount} IdStep ${this.idStep}`);
-        // }, 1000);
+        setInterval(() => {
+            Logger.log("INFO", `Concurrent requests: ${this.activePromises.size} Current ID: ${this.currentId}  lastPublishedTime: ${this.lastPublishedTime} ConsecutiveErrors: ${this.consecutiveErrorCount} IdStep ${this.idStep}`);
+        }, 1000);
     }
 
     updateCurrentId() {
-        const timeSinceLastPublish = Date.now() - this.lastPublishedTime.getTime();
+        const timeSinceLastPublish = Date.now() - this.lastPublishedTime
+        console.log("timeSinceLastPublish",timeSinceLastPublish);
+        
         if (timeSinceLastPublish > 20000) {
             this.idStep = Math.min(this.idStep * 2 + 10, 20);
         } else if (timeSinceLastPublish > 10000) {
@@ -48,6 +50,9 @@ export class Vinted {
         } else {
             this.idStep = 1;
         }
+        if (this.consecutiveErrorCount > 5){
+            this.idStep = 1
+        }
         this.currentId += this.idStep;
     }
 
@@ -55,8 +60,8 @@ export class Vinted {
         if (!this.cookie) {
             await this.refreshCookie();
         }
-
-        if (this.activePromises.size < this.adjustedMaxConcurrentRequests) {
+        this.adjustConcurrency()
+        while (this.activePromises.size < this.adjustedMaxConcurrentRequests) {
             this.updateCurrentId();
             const newItemPromise = this.fetchAndPublishItem(cb).finally(() => {
                 this.activePromises.delete(newItemPromise);
@@ -70,9 +75,9 @@ export class Vinted {
     adjustConcurrency() {
         // If there have been more than 5 consecutive errors, reduce concurrency
         if (this.consecutiveErrorCount > 5) {
-            this.adjustedMaxConcurrentRequests = Math.max(this.adjustedMaxConcurrentRequests - 1, 2);
+            this.adjustedMaxConcurrentRequests = Math.max(this.adjustedMaxConcurrentRequests - 1, 1);
         } else {
-            const timeSinceLastPublication = Date.now() - this.lastPublishedTime.getTime();
+            const timeSinceLastPublication = Date.now() - this.lastPublishedTime;
 
             // Adjust concurrency based on the time since the last publication
             if (timeSinceLastPublication > 6000) {
@@ -85,24 +90,29 @@ export class Vinted {
         }
 
         // Ensure computedConcurrency remains within bounds
-        this.adjustedMaxConcurrentRequests = Math.max(2, Math.min(this.adjustedMaxConcurrentRequests, this.maxConcurrentRequests));
+        this.adjustedMaxConcurrentRequests = Math.max(1, Math.min(this.adjustedMaxConcurrentRequests, this.maxConcurrentRequests));
     }
 
     public async fetchAndPublishItem(processItem: (item: RawItem) => void) {
         try {
             const response = await fetchItem(this.cookie, this.currentId);
             const item = response?.data.item;
+            this.consecutiveErrorCount = 0
             if (item) {
-                processItem(item);
+                try {
+                    processItem(item);
+                } catch (error) {
+                    Logger.log("ERROR",error)
+                }
+                this.lastPublishedTime = new Date(item.updated_at_ts).getTime()
             }
             if (response?.status === 404) {
                 this.consecutiveErrorCount++;
             }
         } catch (error) {
+            this.consecutiveErrorCount++;
             Logger.log("ERROR", error);
         }
-        // IF ITEM -> lastPublishedTime = new Date(item.updated_at_ts).getTime();
-        // PUBLISH TO DISCORD LOGIC
         return;
     }
 
