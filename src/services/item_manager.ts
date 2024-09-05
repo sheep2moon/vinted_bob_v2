@@ -13,11 +13,9 @@ export class ItemManager {
 
     public processItem = async (item: RawItem) => {
         console.log("PROCESSING ITEM", `${item.title}, ${item.brand_dto.title}`);
-        console.log(this.searches);
 
         if (!this.searches || this.searches.length === 0) throw new Error("No searches found");
         for (const search of this.searches) {
-            console.log("SEARCH", search.title);
 
             let phraseMatch = true;
             if (search.phrases) {

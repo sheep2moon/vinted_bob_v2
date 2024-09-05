@@ -15,8 +15,8 @@ import { eq } from "drizzle-orm";
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.listen(3001, () => {
-    console.log("Server started on port 3001");
+app.listen(3000, () => {
+    console.log("Server started on port 3000");
 });
 
 app.get("/brands", async (req, res) => {
