@@ -15,8 +15,8 @@ import { eq } from "drizzle-orm";
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.listen(3000, () => {
-    console.log("Server started on port 3000");
+app.listen(3001, () => {
+    console.log("Server started on port 3001");
 });
 
 app.get("/brands", async (req, res) => {
@@ -47,7 +47,8 @@ app.post("/add-search", async (req: Request, res: Response) => {
                 phrases: data.phrases.join(","),
                 priceFrom: data.priceFrom,
                 priceTo: data.priceTo,
-                sizeIds: data.sizeIds.map(sizeId => parseInt(sizeId))
+                sizeIds: data.sizeIds.map(sizeId => parseInt(sizeId)),
+                createdById: data.createdById
             })
             .returning({ id: customSearch.id });
 
@@ -67,7 +68,6 @@ app.post("/add-search", async (req: Request, res: Response) => {
         Logger.log("ERROR", error);
         res.status(500).send(error);
     }
-
 });
 
 app.post("/delete-search", async (req: Request, res: Response) => {
